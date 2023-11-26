@@ -5,8 +5,9 @@
 #ifndef BOOK_H
 
 #define BOOK_H
+#include "term.h"
 #include "escape.h"
-#include "unix_term.h"
+#include "menu.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -27,18 +28,6 @@
 
 #define MAXROW  9999
 #define MAXCOL  9999
-
-enum mprintf {
-    CEN,
-    LEFT,
-    RIGHT,
-    NORM,
-};
-
-enum TERM_bools {
-    NOCECHO,
-    CECHO,
-};
 
 typedef struct {
     uint32_t magic_num;
@@ -62,31 +51,17 @@ typedef struct {
     header_t *header;
     size_t chapter_num;
     chapter_t *chapters;
+    FILE *bp;
 }book_t;
 
-typedef struct {
-    struct termios *t_echo;
-    struct termios *t_noecho;
-} term_t;
-
-//term functions
-void        reset_term();
-void        save_t_attributes();
-void        reset_input_mode ();
-void        set_input_mode (term_t *term, uint32_t flag);
-void        clear();
-void        hide_cur();
-void        show_cur();
-//tools
-uint32_t    mprintf(uint32_t y, uint32_t x, uint8_t pos, char *str, ...);
-uint32_t    mprintfh(uint32_t y, uint32_t x, uint8_t pos, char *str, ...);
-uint32_t    read_string(uint8_t **string, uint8_t echo);
-
 //header manip functions
+bool        main_menu(book_t **book);
+void        header_menu(FILE *fp, header_t *header);
+void        file_menu(book_t **book);
 void        header_file_write(FILE *fp, header_t *header);
-bool        book_init(book_t **book, term_t **term);
-bool        quit(book_t **book, term_t **term);
+bool        book_init(book_t **book, term_t **term, uint32_t argc, uint8_t **argv);
+bool        book_quit(book_t **book, term_t **term);
 
 /* Read .BOOK from CMD_LINE_ARGV */
-bool        book_file_read(FILE **fp, book_t **book, char *argv);
-#endif // BOOK_H
+bool        book_file_read(book_t **book, uint8_t *path);
+#endif
