@@ -14,4 +14,6 @@ int32_t getch();
 int32_t getche();
 /*getchar no echo for arrowkeys */
 int32_t getcha();
+
+int32_t getchae();
 #endif

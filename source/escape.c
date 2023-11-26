@@ -24,9 +24,8 @@ uint32_t *get_YX() {
 	uint32_t *YX = malloc(sizeof(*YX) * 2);
 	memset(YX, 0, sizeof(*YX));
 	uint8_t *buf;
-	uint32_t len;
 	printf("\033[6n");
-	read_string(&buf, &len, NOCECHO); 
+	read_string(&buf, NOCECHO); 
 	sscanf((char *)buf, "\033[%d;%dR", &YX[0], &YX[1]); 
 	return YX;
 }

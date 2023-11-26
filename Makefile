@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -g -Wall
 
 # List of source files
-SRCS = main.c source/utilities.c source/error_hand.c source/escape.c source/unix_term.c
+SRCS = main.c source/utilities.c source/error_hand.c source/escape.c source/unix_term.c source/menu.c
 
 # Generate a list of object files by replacing .c with .o
 OBJS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))

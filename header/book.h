@@ -34,16 +34,12 @@ enum mprintf {
     RIGHT,
     NORM,
 };
+
 enum TERM_bools {
     NOCECHO,
     CECHO,
 };
 
-typedef struct {
-    uint32_t *termsize;
-    uint32_t defpos[2];
-    uint32_t info;
-}state;
 typedef struct {
     uint32_t magic_num;
     uint8_t def_row_len; // from 10 to 100
@@ -81,20 +77,16 @@ void        set_input_mode (term_t *term, uint32_t flag);
 void        clear();
 void        hide_cur();
 void        show_cur();
-state       *update_state();
 //tools
 uint32_t    mprintf(uint32_t y, uint32_t x, uint8_t pos, char *str, ...);
 uint32_t    mprintfh(uint32_t y, uint32_t x, uint8_t pos, char *str, ...);
-uint32_t    read_string(uint8_t **string, uint32_t *len, uint8_t echo);
-void        print_main_menu();
+uint32_t    read_string(uint8_t **string, uint8_t echo);
 
 //header manip functions
-void        header_menu(FILE *fp, header_t *header, term_t *term);
-state       *header_menu_print();
 void        header_file_write(FILE *fp, header_t *header);
-bool        init(book_t **book, term_t **term);
+bool        book_init(book_t **book, term_t **term);
 bool        quit(book_t **book, term_t **term);
 
 /* Read .BOOK from CMD_LINE_ARGV */
-bool        book_file_read(FILE **fp, book_t **book, char *argv, bool FOFLAG);
+bool        book_file_read(FILE **fp, book_t **book, char *argv);
 #endif // BOOK_H

@@ -3,6 +3,7 @@
 #include "../header/escape.h"
 #include "../header/unix_term.h"
 #include <SDL2/SDL.h>
+#include <fenv.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,21 +11,24 @@
 #include <termios.h>
 #include <unistd.h>
 
-uint32_t read_string(uint8_t **string, uint32_t *len, uint8_t echo) {
+uint32_t read_string(uint8_t **string, uint8_t echo) {
 	
 	uint8_t *tmp = NULL, *tmp2 = NULL;
 	uint32_t i = 0, ch = EOF;
-	
+	show_cur();	
 	while(ch) {
 		
 		if(echo)
-			ch = getche(); 
+			ch = getchae(); 
 		else
 			ch = getch();
-
 		if(ch == EOF || ch == '\n')
 			ch = 0;
-
+		if(ch == '\b') {
+			tmp[i] = '\0';
+			i--;
+			continue;
+		}
 		tmp = (uint8_t *)realloc(tmp2, i +1);
 
 		if(!tmp) {
@@ -38,8 +42,9 @@ uint32_t read_string(uint8_t **string, uint32_t *len, uint8_t echo) {
 			ch = 0;
 	}
 	*string = tmp2;
-	*len = i;
-	return 0;
+	hide_cur();
+
+	return i;
 }
 
 void header_file_write(FILE *fp, header_t *header) {
@@ -70,203 +75,7 @@ void header_file_write(FILE *fp, header_t *header) {
 	}
 }
 
-void header_menu(FILE *fp, header_t *header, term_t *term) {
-	
-	uint8_t exitCond = 0, ch = 0, menuChoice = 0;
-	state *header_s = update_state();
-
-	while(1) {
-
-		clear();	
-		header_s = header_menu_print();
-		clear();
-		switch (header_s->info) {
-			case 1: 
-				mprintf(header_s->defpos[0], header_s->defpos[1], CEN, "Do you want to write the header to the file ? (y/n)");
-					switch(ch = getch()) {
-						case 'y':
-							exitCond = 1;
-							header_file_write(fp, header);
-						break;
-						case 'n': 
-						break;
-						default : 
-							printf("\n--Invalid Input--\n");
-							getch();
-						break;
-						}
-			break;
-			case 2:
-
-				ch = 0;
-
-				mprintf(header_s->defpos[0], header_s->defpos[1], CEN, "Do you want to edit the Header?\n(y/n)");
-				switch (ch = getch()) {
-					case 'y': 
-						clear();
-						memset(header, 0, sizeof(*header));	
-						header->magic_num = 0x69133742;
-						header->def_col_len = 0x1e;
-						header->def_row_len = 0x50;
-						printf("\t--EDIT MODE--\n\n");
-						printf("\nEnter Author: ");
-						read_string(&header->author, &header->author_len, CECHO);
-						printf("\nEnter Book Title: ");
-						read_string(&header->title, &header->title_len, CECHO);
-						printf("\nEnter Release Date: ");
-						read_string(&header->release_date, &header->release_date_len, CECHO);
-						printf("\nSuccesfully Edited!\n\nPress Enter to return to Menu...");
-						exitCond = 1;
-					break;
-					case 'n' : 
-					break;
-					default:
-						exitCond = 0;
-						mprintf(header_s->termsize[0], 0, NORM, "--Invalid Input--");
-					break;
-				}
-			break;
-			case 3:
-				ch = 0;
-
-				printf( "Author: %s"
-						"Title: %s"
-						"Release Date: %s"
-						"Magic Number: %#010x",
-						 header->author,
-						 header->title,
-						 header->release_date,
-						 header->magic_num);
-				printf("Is the Information Correct?\n(y/n)");
-				switch (ch = getch()) {
-					case 'y': 
-						ch = 0;
-						printf("\nDo you want to write the header to the file ?\n(y/n)");
-						switch(ch = getch()) {
-							case 'y':
-								exitCond = 1;
-								header_file_write(fp, header);
-							break;
-							case 'n': 
-							break;
-							default : 
-								printf("\n--Invalid Input--\n");
-							break;
-						}
-					break;
-					case 'n': 
-					break;
-					default :
-						printf("Invaild Input!\nPress enter to return to display mode...");
-						getch();
-					break;
-				}
-			break;
-			default:
-				printf("\n\nInvalid Input");
-			break;
-		}
-		if (exitCond == 1)
-			break;
-	}
-	free(header_s);
-}
-
-state *header_menu_print() {
-
-	uint8_t ch = 0;
-	uint8_t cond = 0;
-	uint32_t opts = 4;
-	uint32_t *maxYX = NULL, *YX = NULL, *saveYX = NULL, *highlighted = NULL, len = 0;
-	state *state = update_state();
-
-	maxYX = get_maxYX();
-	YX = malloc(sizeof(*maxYX) * opts);
-	saveYX = malloc(sizeof(maxYX));
-	highlighted = malloc(sizeof(maxYX));
-	memset(highlighted, 0, sizeof(*highlighted));
-	saveYX[0] = maxYX[0] / 4;
-	saveYX[1] = maxYX[1] / 2;
-	YX[0] = saveYX[0] + 4;
-	YX[1] = saveYX[0] + 6;
-	YX[2] = saveYX[0] + 8;
-	YX[3] = saveYX[0] + 10;
-
-	while (1) {
-
-
-		len = mprintf(saveYX[0], saveYX[1], CEN, "---Add a Book to your Collection---");
-		if(highlighted[0] == 0)
-			highlighted[0] = saveYX[0] + 4;
-		if(highlighted[0] == (saveYX[0] + 4)) {
-			mprintfh(YX[0], saveYX[1] - (len / 2), NORM, "Edit header Information");
-		} else {
-			mprintf(YX[0], saveYX[1] - (len / 2), NORM, "Edit header Information");
-		}
-		if(highlighted[0] == (saveYX[0] + 6)) {
-			mprintfh(YX[1], saveYX[1] - (len / 2), NORM, "Edit header Information");
-		} else {
-			mprintf(YX[1], saveYX[1] - (len / 2), NORM, "Edit header Information");
-		}
-		if(highlighted[0] == (saveYX[0] + 8)) {
-			mprintfh(YX[2], saveYX[1] - (len / 2), NORM, "Edit header Information");
-		} else {
-			mprintf(YX[2], saveYX[1] - (len / 2), NORM, "Edit header Information");
-		}
-		if(highlighted[0] == (saveYX[0] + 10)) {
-			mprintfh(YX[3], saveYX[1] - (len / 2), NORM,"Edit header Information");
-		} else {
-			mprintf(YX[3], saveYX[1] - (len / 2), NORM,"Edit header Information");
-		}
-		switch (getcha()) {
-			case 65:
-				if(highlighted[0] == saveYX[0] + 4) {
-					break;
-				} else {
-					highlighted[0] -= 2;
-				}
-			break;
-			case 66: 
-				if(highlighted[0] == saveYX[0] + 10) {
-					break;
-				} else {
-					highlighted[0] += 2;
-				}
-			break;
-			case 67:
-			break;
-			case 68:
-			break;
-			case 10:
-				cond = 1;
-				if(highlighted[0] == YX[0])
-					state->info = 1;
-				if(highlighted[0] == YX[1])
-					state->info = 2;
-				if(highlighted[0] == YX[2])
-					state->info = 3;
-				if(highlighted[0] == YX[3])
-					state->info = 4;
-			break;
-			default : 
-				cond = 0;
-
-				mprintf(maxYX[0] -2 , 1, NORM, "Invalid Input!\nPress Enter to restart\n");
-				getch();		
-				move_cursor(saveYX[0], saveYX[1]);
-			break;
-		}
-		if (cond == 1) {
-			break;
-		}
-	}
-	free(saveYX);
-	free(maxYX);
-	free(highlighted);
-	return state;
-}
-
-bool book_file_read(FILE **fp, book_t **book, char *path, bool file_open) {
+bool book_file_read(FILE **fp, book_t **book, char *path) {
 
 	if((strstr(path, ".book")) == NULL) {
 		print_error(ERR_FNAME, path, EXIT);
@@ -294,9 +103,8 @@ bool book_file_read(FILE **fp, book_t **book, char *path, bool file_open) {
 	clear();
 	printf("File Opened Succesfully! Press any key to continue...");
 	getch();
-	file_open = true;
 	
-	return file_open;
+	return true;
 }
 
 void clear() {
@@ -322,9 +130,9 @@ bool quit(book_t **book, term_t **term) {
 	return EXIT_SUCCESS;
 }
 
-bool init(book_t **book, term_t **term) {
+bool book_init(book_t **book, term_t **term) {
 	
-	//hide_cur();
+	hide_cur();
 	printf("\033[1049h");
 	printf("\033[5=h");
 	save_t_attributes();
@@ -345,17 +153,13 @@ bool init(book_t **book, term_t **term) {
 	return EXIT_SUCCESS;
 }
 
-void print_main_menu() {
-
-	uint32_t *maxYX = get_maxYX();
-	uint32_t midY = maxYX[0] / 4;
-	uint32_t midX = maxYX[1] / 2;
-
-	move_cursor(midY, midX);
-	mprintf(midY, midX, NORM, "---Main Menu---");
-}
-
 uint32_t mprintf(uint32_t y, uint32_t x, uint8_t pos, char *str, ...) {
+
+	char buffer[2048];
+
+	va_list args;
+	va_start(args, str);
+	vsprintf(buffer, str, args);
 
 	uint32_t len = strlen((char *)str);
 	switch (pos) {
@@ -371,14 +175,20 @@ uint32_t mprintf(uint32_t y, uint32_t x, uint8_t pos, char *str, ...) {
 		break;
 	}
 	move_cursor(y, x);
-	printf("%s", str);
+	printf("%s", buffer);
 
 	return len;
 }
 
 uint32_t mprintfh(uint32_t y, uint32_t x, uint8_t pos, char *str, ...) {
 
+	va_list args;
+	char buffer[2048];
+
+	va_start(args, str);
+	vsprintf(buffer, str, args);
 	uint32_t len = strlen((char *)str);
+
 	switch (pos) {
 		case 0:
 			x -= len / 2;
@@ -388,13 +198,14 @@ uint32_t mprintfh(uint32_t y, uint32_t x, uint8_t pos, char *str, ...) {
 		break;
 		case 2: 
 			x += len;
+		break;
 		default: 
 		break;
 	}
 	move_cursor(y, x);
 	printf("\033[38;2;0;0;0m");
 	printf("\033[48;2;255;255;255m");
-	printf("%s", str);
+	printf("%s", buffer);
 	printf("\033[0m");
 
 	return len;

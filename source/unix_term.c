@@ -36,7 +36,32 @@ int32_t getcha() {
 
     if((ch = getch()) != '\033')
         return ch;
-    if((ch = getch()) == 13)
+    if((ch = getch()) == 13 || ch == 8)
+        return ch;
+
+    return getch();
+}
+
+int32_t getchae() {
+
+    int32_t ch = 0;
+
+    ch = getche();
+    switch (ch) {
+        case '^':
+            switch(ch = getche()) {
+                case '?':
+                return '\b';
+            break;
+            default:
+            break;
+            }
+        default:
+            return ch;
+        break;
+    }
+    ch = getch();
+    if(ch == 13 || ch == 8)
         return ch;
 
     return getch();
