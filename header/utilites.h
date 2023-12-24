@@ -2,6 +2,7 @@
 #define UTILITIES_H
 
 #include "book.h"
+#include "escape.h"
 #include <stdint.h>
 #include "../header/term.h"
 #include "../header/menu.h"

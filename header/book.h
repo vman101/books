@@ -7,7 +7,6 @@
 #define BOOK_H
 #include "term.h"
 #include "escape.h"
-#include "menu.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -56,7 +55,8 @@ typedef struct {
 
 //header manip functions
 bool        main_menu(book_t **book);
-void        header_menu(FILE *fp, header_t *header);
+void        header_menu(header_t *header);
+void        header_menu_edit(header_t *header);
 void        file_menu(book_t **book);
 void        header_file_write(FILE *fp, header_t *header);
 bool        book_init(book_t **book, term_t **term, uint32_t argc, uint8_t **argv);

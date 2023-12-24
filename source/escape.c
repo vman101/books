@@ -2,32 +2,34 @@
 #include "../header/utilites.h"
 #include "../header/book.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 uint32_t *get_maxYX() {
 	
-	uint32_t *oldYX, *maxYX;
-	uint32_t len = 0;
-	
-	oldYX = get_YX();
-	move_cursor(MAXROW, MAXCOL);
-	maxYX = get_YX();	
-	move_cursor(oldYX[0], oldYX[1]);
-	free(oldYX);
+    uint32_t *oldYX, *maxYX;
+    uint32_t len = 0;
+    
+    oldYX = get_YX();
+    move_cursor(MAXROW, MAXCOL);
+    maxYX = get_YX();	
+    move_cursor(oldYX[0], oldYX[1]);
+    free(oldYX);
 
-	return maxYX;
+    return maxYX;
 }
 
 
 uint32_t *get_YX() {
 
-	uint32_t *YX = malloc(sizeof(*YX) * 2);
-	uint8_t *buf;
-	memset(YX, 0, sizeof(*YX));
-	printf("\033[6n");
-	read_stringesc(&buf, NOCECHO); 
-	sscanf((char *)buf, "\033[%d;%dR", &YX[0], &YX[1]); 
-	return YX;
+    uint32_t *YX = malloc(sizeof(*YX) * 2);
+    uint8_t *buf = NULL;
+
+    memset(YX, 0, sizeof(*YX));
+    printf("\033[6n");
+    read_stringesc(&buf, NOCECHO); 
+    sscanf((char *)buf, "\033[%d;%dR", &YX[0], &YX[1]); 
+    return YX;
 }
 
 int32_t getch_(uint8_t echo) {

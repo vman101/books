@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 	clear();
 	book_init(&book, &term, argc, (uint8_t **)argv);
 
-	while(!main_menu(&book)) {}
+	while(!main_menu(&book)); 
 
 	book_quit(&book, &term);
 

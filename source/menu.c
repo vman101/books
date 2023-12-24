@@ -5,21 +5,37 @@
 #include "../header/book.h"
 #include "../header/error_hand.h"
 
-state_t *update_state() {
+state_t *state_init() {
 
-	state_t *current = malloc(sizeof(*current)); 
+	state_t *current = malloc(sizeof(*current));
 	memset(current, 0, sizeof(*current));	
 	current->termsize = malloc(sizeof(*current->termsize));	
 	memset(current->termsize, 0, sizeof(*current->termsize));
-	current->termsize = get_maxYX();
-	current->defpos[0] = current->termsize[0] / 4;
-	current->defpos[1] = current->termsize[1] / 4;
-	current->currpos = get_YX();
+	current->saveposcnt = 0;
+	current->savepos = malloc(sizeof(*current->savepos));
+	state_update(current);
+
 	return current;
+}
+void state_update(state_t *state) {
+	
+	uint32_t *tmp = NULL;
+	state->termsize = get_maxYX();
+	state->defpos[0] = state->termsize[0] / 4;
+	state->defpos[1] = state->termsize[1] / 4;
+	state->savepos[state->saveposcnt] = realloc(tmp, (sizeof(*state->savepos) * state->saveposcnt + 1));	
+	state->savepos[state->saveposcnt] = state->currpos = get_YX();
+	state->saveposcnt++;
 }
 
 void state_close(state_t *state) {
 
+	if(state->saveposcnt && state->savepos[0]){
+		for(int i = 0; i < state->saveposcnt; i++) {
+			free(state->savepos[i]);
+		}
+	}
+	free(state->savepos);
 	if(state->termsize)
 		free(state->termsize);
 	if(state->currpos)
@@ -32,10 +48,23 @@ submenu_t *submenu_init(uint32_t submenu_type) {
 	
 	submenu_t *submenu = malloc(sizeof(*submenu));
 	memset(submenu, 0, sizeof(*submenu));
-	submenu->state = update_state();
+	submenu->state = state_init(); 
 
 	switch(submenu_type) {
 		case 0:
+			submenu->state->defpos[1] = (submenu->state->termsize[1] * 0.5);
+			submenu->itemcnt = 5;
+			if(!(submenu->items = malloc(sizeof(*submenu->items) * submenu->itemcnt)))
+				print_error(ERR_MALLOC, "submenu_itmes", EXIT);
+			submenu->items[0] = (uint8_t *)strdup("Header Editor");
+			submenu->items[1] = (uint8_t *)strdup("Author: ");
+			submenu->items[2] = (uint8_t *)strdup("Title: ");
+			submenu->items[3] = (uint8_t *)strdup("Relase Date: ");
+			submenu->items[4] = (uint8_t *)strdup("Confirm");
+			if(!(submenu->input = malloc(sizeof(submenu->input) * submenu->itemcnt - 1)))
+				print_error(ERR_MALLOC, "submenu_header_edit_input", EXIT);
+			submenu->padding = 4;
+			submenu->itemdist = 2;
 		break;
 	}
 	return submenu;
@@ -50,12 +79,52 @@ void submenu_close(submenu_t *submenu) {
 	if(submenu)
 		free(submenu);
 }
+
+void submenu_input_print(submenu_t *submenu) {
+
+	submenu->state->currpos = submenu->state->defpos;
+	mprintf(submenu->state->currpos[0], submenu->state->currpos[1], NORM, (char *)submenu->items[0]);
+	for(int i = 0; i < submenu->itemcnt - 1; i++) {
+		mprintf(submenu->state->currpos[0] += submenu->itemdist, submenu->state->currpos[1] - strlen((char *)submenu->items[i]), NORM, (char *)submenu->items[i + 1]);
+		state_update(submenu->state);
+	}
+}
+
+void submenu_input_get(submenu_t *input) {
+	
+	uint32_t c = 0;
+	show_cur();	
+	submenu_input_print(input);
+	while(1) {
+		state_update(input->state);
+		switch(getcha()) {
+			case 'A': 
+				if(c > 0) {
+					c--;
+					move_cursor(input->state->savepos[input->state->saveposcnt - input->itemcnt + c][0], input->state->savepos[input->state->saveposcnt - input->itemcnt + c][1]);	
+				}
+			break;
+			case 'B':
+				if(c < input->itemcnt - 2) {
+					c++;
+					move_cursor(input->state->savepos[input->state->saveposcnt - input->itemcnt + c][0], input->state->savepos[input->state->saveposcnt - input->itemcnt + c][1]);	
+				}
+			break;
+			case 'C':
+				read_string(&input->input[c], ECHO); 
+			break;
+		}
+	}
+	hide_cur();
+}
+
 menu_t *menu_init(uint32_t menu_type) {
 	
 	menu_t *menu = malloc(sizeof(*menu));
 	memset(menu, 0, sizeof(*menu));
-	menu->state = update_state();
-
+	menu->state = state_init();
+	menu->submenus = malloc(sizeof(**menu->submenus));
+	menu->book = malloc(sizeof(*menu->book));
 	switch (menu_type) {
 		case MAIN:
 			menu->itemcnt = 4;
@@ -82,7 +151,7 @@ menu_t *menu_init(uint32_t menu_type) {
 		break;
 		case OPENFILE:
 			menu->itemcnt = 4;
-			if(!(menu->items = malloc(menu->itemcnt * sizeof(char*))))
+			if(!(menu->items = malloc(menu->itemcnt * sizeof(char *))))
 				print_error(ERR_MALLOC, "open_file_menu", EXIT);
 			menu->items[0] = (uint8_t *)strdup("---FILE MENU---");
 			menu->items[1] = (uint8_t *)strdup("Enter file name");
@@ -107,6 +176,7 @@ void menu_print(menu_t *menu) {
 	uint8_t ch = 0, cond = 0;
 	uint32_t *highlighted = NULL, i = 0;
 	
+	state_update(menu->state);
 	clear();
 	highlighted = malloc(sizeof(menu->state->termsize));
 	memset(highlighted, 0, sizeof(*highlighted));
@@ -155,15 +225,4 @@ void menu_print(menu_t *menu) {
 	}
 	free(highlighted);
 }
-
-void open_file_menu(FILE **fp, book_t **book) {
-
-	menu_t *file_menu = menu_init(OPENFILE);		
-	menu_print(file_menu);
-			
-	uint8_t *path;
-	mvread_string(&path, CECHO, file_menu->state->currpos);
-	book_file_read(book, path);
-}
-
 

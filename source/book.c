@@ -1,3 +1,4 @@
+#include "../header/menu.h"
 #include "../header/utilites.h"
 #include "../header/book.h"
 #include "../header/term.h"
@@ -125,18 +126,18 @@ void header_file_write(FILE *fp, header_t *header) {
 bool main_menu(book_t **book) {
 
 	menu_t *main_menu;
-	
+			
 	clear();
 	if(!(main_menu = menu_init(MAIN)))
 		print_error(ERR_MALLOC, "main_menu", EXIT);	
+	main_menu->book = *book;
 	menu_print(main_menu);
 	switch(main_menu->itemchoice) {
-		
-		case 0: 
-			header_menu((*book)->bp, (*book)->header);
+		case 0:
+			header_menu(main_menu->book->header);
 		break;
 		case 1:
-			file_menu(book);
+			file_menu(&main_menu->book);
 		break;
 		case 2:
 			menu_close(main_menu);
@@ -146,10 +147,11 @@ bool main_menu(book_t **book) {
 	return false;
 }
 
-void header_menu(FILE *fp, header_t *header) {
+void header_menu(header_t *header) {
 	
 	uint8_t exitCond = 0, ch = 0;
 	menu_t *header_menu = menu_init(HEADER);
+	header_menu->book->header = header;
 
 	while(1) {
 
@@ -157,33 +159,9 @@ void header_menu(FILE *fp, header_t *header) {
 		clear();	
 		switch (header_menu->itemchoice) {
 			case 0: 
-				ch = 0;
-				//edit menu
-				mprintf(header_menu->state->defpos[0], header_menu->state->defpos[1], CEN, "Do you want to edit the Header?\n(y/n)");
-				switch (ch = getch()) {
-					case 'y': 
-						clear();
-						memset(header, 0, sizeof(*header));	
-						header->magic_num = 0x69133742;
-						header->def_col_len = 0x1e;
-						header->def_row_len = 0x50;
-						printf("\nEnter Author: ");
-						header->author_len = read_string(&header->author, CECHO);
-						printf("\nEnter Book Title: ");
-						header->title_len = read_string(&header->title, CECHO);
-						printf("\nEnter Release Date: ");
-						header->release_date_len = read_string(&header->release_date,  CECHO);
-						printf("\nSuccesfully Edited!\n\nPress Enter to return to Menu...");
-						exitCond = 1;
-					break;
-					case 'n' : 
-					break;
-					default:
-					break;
-				}
-		break;
+				header_menu_edit(header);
+			break;
 			case 1:
-
 				ch = 0;
 				printf( "Author: %s"
 						"Title: %s"
@@ -201,21 +179,18 @@ void header_menu(FILE *fp, header_t *header) {
 						switch(ch = getch()) {
 							case 'y':
 								exitCond = 1;
-								header_file_write(fp, header);
 							break;
 							case 'n': 
 							break;
 							default : 
 							break;
 						}
-				
 			break;
 			case 2:
 				mprintf(header_menu->state->defpos[0], header_menu->state->defpos[1], CEN, "Do you want to write the header to the file ? (y/n)");
 					switch(ch = getch()) {
 						case 'y':
 							exitCond = 1;
-							header_file_write(fp, header);
 						break;
 						case 'n': 
 						break;
@@ -230,7 +205,7 @@ void header_menu(FILE *fp, header_t *header) {
 				}
 			break;
 			case 3:
-				header_menu->state = update_state();
+				state_update(header_menu->state);
 				mprintf(header_menu->state->defpos[0], 0, NORM, "Exiting Header Menu");
 				if(getch() == '\033')
 					break;
@@ -245,12 +220,17 @@ void header_menu(FILE *fp, header_t *header) {
 	menu_close(header_menu);
 }
 
+void header_menu_edit(header_t *header) {
+
+	submenu_t *edit_menu = submenu_init(HEADER_EDIT);
+	submenu_input_get(edit_menu);
+	submenu_close(edit_menu);
+}
+
 void file_menu(book_t **book) {
 
 	menu_t *file_menu = menu_init(OPENFILE);		
-	menu_print(file_menu);
-			
 	uint8_t *path;
-	mvread_string(&path, CECHO, file_menu->state->currpos);
-	book_file_read(book, path);
+
+	menu_print(file_menu);
 }

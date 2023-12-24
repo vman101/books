@@ -24,7 +24,6 @@ uint32_t read_stringesc(uint8_t **string, uint8_t echo) {
 		if(ch == EOF || ch == '\n')
 			ch = 0;
 		if(ch == '\b') {
-			printf("bla");	
 			uint32_t *YX = get_YX();
 			mprintf(YX[0], YX[1] - 1, NORM, "%c ½c", ch, ch);
 			i--;
@@ -94,7 +93,7 @@ uint32_t mvread_string(uint8_t **string, uint8_t echo, uint32_t *YX) {
 	uint8_t *tmp = NULL, *tmp2 = NULL;
 	uint32_t ch = EOF;
 	uint32_t i = 0;
-	state_t *tmpst = update_state();
+	state_t *tmpst = state_init();
 
 	show_cur();	
 	
@@ -127,7 +126,6 @@ uint32_t mvread_string(uint8_t **string, uint8_t echo, uint32_t *YX) {
 	}
 	*string = tmp2;
 	hide_cur();
-	
 
 	return i;
 }
@@ -194,5 +192,3 @@ uint32_t mprintfh(uint32_t y, uint32_t x, uint8_t pos, char *str, ...) {
 
 	return len;
 }
-
-
